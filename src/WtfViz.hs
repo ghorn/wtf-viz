@@ -24,10 +24,10 @@ data Line =
   , lineSceneNode :: WV.SceneNode
   }
 
-newLine :: Int -> IO Line
-newLine k = do
-  let objName = "Lines__obj__" ++ show k
-      nodeName = "Lines__node__" ++ show k
+newLine :: String -> Int -> IO Line
+newLine name k = do
+  let objName = "Lines__" ++ name ++ "__obj__" ++ show k
+      nodeName = "Lines__" ++ name ++ "__node__" ++ show k
   -- make ManualObject
   obj <- WV.manualObjectCreate objName
   WV.manualObjectSetDynamic obj True
