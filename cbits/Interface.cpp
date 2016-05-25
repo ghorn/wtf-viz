@@ -11,10 +11,12 @@ extern "C" {
                    HsFunPtr haskell_mouse_moved);
   void wv2_set_extra_messages(char *msgs);
   void wv2_set_skybox(int some_bool, char *name);
+  void wv2_shut_down();
 
   // Camera
   Ogre::Camera* wv2_camera_get();
   void wv2_camera_look_at(Ogre::Camera *obj, double x, double y, double z);
+  void wv2_camera_set_polygon_mode(Ogre::Camera *obj, int mode);
   void wv2_camera_set_position(Ogre::Camera *obj, double x, double y, double z);
   void wv2_camera_set_orientation(Ogre::Camera *obj, double w, double x, double y, double z);
   void wv2_camera_set_direction(Ogre::Camera *obj, double x, double y, double z);
@@ -63,9 +65,19 @@ extern "C" {
   // Mouse
   int wv2_mouse_state_is_button_down(OIS::MouseState *obj, int button);
 
+  // Overlay
+  Ogre::Overlay* wv2_debug_overlay_get();
+  int wv2_overlay_is_visible(Ogre::Overlay *obj);
+  void wv2_overlay_show(Ogre::Overlay *obj);
+  void wv2_overlay_hide(Ogre::Overlay *obj);
+
   // Pass
   void wv2_pass_set_scene_blending(Ogre::Pass *obj, int k);
   void wv2_pass_set_depth_write_enabled(Ogre::Pass *obj, int k);
+
+  // RenderWindow
+  Ogre::RenderWindow* wv2_render_window_get();
+  void wv2_render_window_write_contents_to_timestamped_file(Ogre::RenderWindow*, char *name, char *ext);
 
   // SceneNode
   Ogre::SceneNode* wv2_scene_node_get_root();
@@ -116,6 +128,11 @@ void wv2_set_skybox(int some_bool, char *name) {
   OgreFramework::getSingletonPtr()->m_pSceneMgr->setSkyBox(some_bool, std::string(name));
 }
 
+void wv2_shut_down() {
+  OgreFramework::getSingletonPtr()->m_bShutDownOgre = true;
+}
+
+
 // Camera
 Ogre::Camera* wv2_camera_get() {
   return OgreFramework::getSingletonPtr()->m_pCamera;
@@ -123,6 +140,22 @@ Ogre::Camera* wv2_camera_get() {
 
 void wv2_camera_look_at(Ogre::Camera *obj, double x, double y, double z) {
   obj->lookAt(x, y, z);
+}
+
+void wv2_camera_set_polygon_mode(Ogre::Camera *obj, int mode) {
+  switch(mode) {
+  case 1:
+    obj->setPolygonMode(Ogre::PM_POINTS);
+    break;
+  case 2:
+    obj->setPolygonMode(Ogre::PM_WIREFRAME);
+    break;
+  case 3:
+    obj->setPolygonMode(Ogre::PM_SOLID);
+    break;
+  default:
+    throw "wv2_camera_set_polygon_mode: got bad value";
+  }
 }
 
 void wv2_camera_set_position(Ogre::Camera *obj, double x, double y, double z) {
@@ -306,6 +339,25 @@ int wv2_mouse_state_is_button_down(OIS::MouseState *obj, int button) {
   return obj->buttonDown(static_cast<OIS::MouseButtonID>(button));
 }
 
+
+// Overlay
+Ogre::Overlay* wv2_debug_overlay_get() {
+  return OgreFramework::getSingletonPtr()->m_debugOverlay;
+}
+
+int wv2_overlay_is_visible(Ogre::Overlay *obj) {
+  return obj->isVisible();
+}
+
+void wv2_overlay_show(Ogre::Overlay *obj) {
+  obj->show();
+}
+
+void wv2_overlay_hide(Ogre::Overlay *obj) {
+  obj->hide();
+}
+
+
 // Pass
 Ogre::SceneBlendType fromHaskellSceneBlendType(int haskellSceneBlendType) {
   // do this manually in case ogre changes
@@ -341,7 +393,16 @@ void wv2_pass_set_depth_write_enabled(Ogre::Pass *obj, int k) {
 }
 
 
-// scene
+// RenderWindow
+Ogre::RenderWindow* wv2_render_window_get() {
+  return OgreFramework::getSingletonPtr()->m_pRenderWnd;
+}
+void wv2_render_window_write_contents_to_timestamped_file(Ogre::RenderWindow* obj, char *name, char *ext) {
+  obj->writeContentsToTimestampedFile(std::string(name), std::string(ext));
+}
+
+
+// SceneNode
 Ogre::SceneNode* wv2_scene_node_get_root() {
   return OgreFramework::getSingletonPtr()->m_pSceneMgr->getRootSceneNode();
 }

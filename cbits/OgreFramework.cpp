@@ -90,8 +90,8 @@ bool OgreFramework::initOgre(Ogre::String wndTitle,
   m_pMouse =
     static_cast<OIS::Mouse*>(m_pInputMgr->createInputObject(OIS::OISMouse, true));
 
-//  m_pMouse->getMouseState().height = m_pRenderWnd->getHeight();
-//  m_pMouse->getMouseState().width  = m_pRenderWnd->getWidth();
+  m_pMouse->getMouseState().height = m_pRenderWnd->getHeight();
+  m_pMouse->getMouseState().width  = m_pRenderWnd->getWidth();
 
   if (pKeyListener == 0)
     m_pKeyboard->setEventCallback(this);
@@ -199,56 +199,6 @@ OgreFramework::~OgreFramework() {
 
 
 bool OgreFramework::keyPressed(const OIS::KeyEvent &keyEventRef __attribute__((unused))) {
-  if (m_pKeyboard->isKeyDown(OIS::KC_ESCAPE)) {
-    m_bShutDownOgre = true;
-    return true;
-  }
-
-  if (m_pKeyboard->isKeyDown(OIS::KC_SYSRQ)) {
-    m_pRenderWnd->writeContentsToTimestampedFile("BOF_Screenshot_", ".png");
-    return true;
-  }
-
-  if (m_pKeyboard->isKeyDown(OIS::KC_M)) {
-    static int mode = 0;
-
-    if (mode == 2) {
-      m_pCamera->setPolygonMode(Ogre::PM_SOLID);
-      mode = 0;
-    } else if (mode == 0) {
-      m_pCamera->setPolygonMode(Ogre::PM_WIREFRAME);
-      mode = 1;
-    } else if (mode == 1) {
-      m_pCamera->setPolygonMode(Ogre::PM_POINTS);
-      mode = 2;
-    }
-  }
-
-  if (m_pKeyboard->isKeyDown(OIS::KC_D)) {
-    if (m_debugOverlay) {
-      if (m_debugOverlay->isVisible()) {
-        printf("hiding overlay\n");
-        m_debugOverlay->hide();
-      } else {
-        printf("showing overlay\n");
-        m_debugOverlay->show();
-      }
-    }
-  }
-  //  if (m_pKeyboard->isKeyDown(OIS::KC_O))
-  //  {
-  //    if (m_pTrayMgr->isLogoVisible())
-  //    {
-  //      m_pTrayMgr->hideLogo();
-  //      m_pTrayMgr->hideFrameStats();
-  //    }
-  //    else
-  //    {
-  //      m_pTrayMgr->showLogo(OgreBites::TL_BOTTOMRIGHT);
-  //      m_pTrayMgr->showFrameStats(OgreBites::TL_BOTTOMLEFT);
-  //    }
-  //  }
-
   return true;
 }
 

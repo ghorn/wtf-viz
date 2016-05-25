@@ -69,6 +69,8 @@ public:
   OIS::Keyboard*      m_pKeyboard;
   OIS::Mouse*         m_pMouse;
 
+  bool m_bShutDownOgre;
+
 private:
   OgreFramework(const OgreFramework&);
   OgreFramework& operator= (const OgreFramework&);
@@ -76,8 +78,6 @@ private:
   //  OgreBites::SdkTrayManager* m_pTrayMgr;
   Ogre::FrameEvent  m_FrameEvent;
   int               m_iNumScreenShots;
-
-  bool              m_bShutDownOgre;
 
   std::string extra_messages;
 };

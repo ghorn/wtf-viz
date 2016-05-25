@@ -6,11 +6,13 @@ module WtfViz.FFI.FFI
          VizRunner(..)
        , Axis(..)
        , runViz
+       , shutDownViz
 
          -- * Camera
-       , Camera
+       , Camera, PolygonMode(..)
        , cameraGet
        , cameraLookAt
+       , cameraSetPolygonMode
        , cameraSetPosition
        , cameraSetOrientation
        , cameraSetDirection
@@ -66,10 +68,22 @@ module WtfViz.FFI.FFI
        , MouseState
        , isButtonDown
 
+         -- * Overlay
+       , Overlay
+       , debugOverlayGet
+       , overlayIsVisible
+       , overlayShow
+       , overlayHide
+
          -- * Pass
        , SceneBlendType(..)
        , passSetSceneBlending
        , passSetDepthWriteEnabled
+
+         -- * RenderWindow
+       , RenderWindow
+       , renderWindowGet
+       , renderWindowWriteContentsToTimestampedFile
 
          -- * SceneNode
        , SceneNode
@@ -101,6 +115,22 @@ import Linear ( Quaternion(..), V3(..) )
 
 import WtfViz.FFI.Keyboard
 import WtfViz.FFI.Mouse
+
+data PolygonMode
+  = PM_POINTS -- ^ Only points are rendered.
+  | PM_WIREFRAME -- ^ Wireframe models are rendered.
+  | PM_SOLID -- ^ Solid polygons are rendered.
+  deriving (Eq, Ord, Show, Generic)
+
+instance Enum PolygonMode where
+  toEnum 1 = PM_POINTS
+  toEnum 2 = PM_WIREFRAME
+  toEnum 3 = PM_SOLID
+  toEnum k = error $ "toEnum PolygonMode got bad value (" ++ show k ++ ")"
+
+  fromEnum PM_POINTS = 1
+  fromEnum PM_WIREFRAME = 2
+  fromEnum PM_SOLID = 3
 
 data RenderOp
   = OT_POINT_LIST -- ^ A list of points, 1 vertex per point
@@ -137,8 +167,14 @@ newtype Material = Material (Ptr Material')
 data MaterialManager'
 newtype MaterialManager = MaterialManager (Ptr MaterialManager')
 
+data Overlay'
+newtype Overlay = Overlay (Ptr Overlay')
+
 data Pass'
 newtype Pass = Pass (Ptr Pass')
+
+data RenderWindow'
+newtype RenderWindow = RenderWindow (Ptr RenderWindow')
 
 data SceneNode'
 newtype SceneNode = SceneNode (Ptr SceneNode')
@@ -176,12 +212,15 @@ foreign import ccall safe "wv2_run_viz"
            -> FunPtr (Ptr MouseState' -> CInt -> CInt -> CInt -> CInt -> CInt -> CInt -> IO ()) -- mouse moved
            -> IO ()
 
+foreign import ccall safe "wv2_shut_down"
+  c_shutDownViz :: IO ()
+
 data VizRunner a =
   VizRunner
   { vizInitialize :: IO a
   , vizUpdate :: Double -> a -> IO a
-  , vizKeyPressed :: KeyCode -> CUInt -> a -> IO a
-  , vizKeyReleased :: KeyCode -> CUInt -> a -> IO a
+  , vizKeyPressed :: KeyCode -> a -> IO a
+  , vizKeyReleased :: KeyCode -> a -> IO a
   , vizMousePressed :: MouseButton -> a -> IO a
   , vizMouseReleased :: MouseButton -> a -> IO a
   , vizMouseMoved :: (MouseButton -> IO Bool) -> Axis CInt -> Axis CInt -> Axis CInt -> a -> IO a
@@ -200,14 +239,14 @@ runViz vizRunner = do
     state1 <- vizUpdate vizRunner (realToFrac timeSinceLastFrame) state0
     writeIORef stateRef state1
 
-  keyPressedPtr <- c_wrapKeyEvent $ \keyCode keyText -> do
+  keyPressedPtr <- c_wrapKeyEvent $ \keyCode _keyText -> do
     state0 <- readIORef stateRef
-    state1 <- vizKeyPressed vizRunner (toEnum (fromIntegral keyCode)) keyText state0
+    state1 <- vizKeyPressed vizRunner (toEnum (fromIntegral keyCode)) state0
     writeIORef stateRef state1
 
-  keyReleasedPtr <- c_wrapKeyEvent $ \keyCode keyText -> do
+  keyReleasedPtr <- c_wrapKeyEvent $ \keyCode _keyText -> do
     state0 <- readIORef stateRef
-    state1 <- vizKeyReleased vizRunner (toEnum (fromIntegral keyCode)) keyText state0
+    state1 <- vizKeyReleased vizRunner (toEnum (fromIntegral keyCode)) state0
     writeIORef stateRef state1
 
   mousePressedPtr <- c_wrapMousePressedOrReleased $ \button -> do
@@ -242,7 +281,8 @@ runViz vizRunner = do
 
   c_runViz initPtr updatePtr keyPressedPtr keyReleasedPtr mousePressedPtr mouseReleasedPtr mouseMovedPtr
 
-
+shutDownViz :: IO ()
+shutDownViz = c_shutDownViz
 
 -- Camera
 foreign import ccall unsafe "wv2_camera_get"
@@ -258,6 +298,14 @@ foreign import ccall unsafe "wv2_camera_look_at"
 cameraLookAt :: Camera -> Double -> Double -> Double -> IO ()
 cameraLookAt (Camera obj) x y z =
   c_cameraLookAt obj (realToFrac x) (realToFrac y) (realToFrac z)
+
+
+foreign import ccall unsafe "wv2_camera_set_polygon_mode"
+  c_cameraSetPolygonMode :: Ptr Camera' -> CInt -> IO ()
+
+cameraSetPolygonMode :: Camera -> PolygonMode -> IO ()
+cameraSetPolygonMode (Camera obj) mode =
+  c_cameraSetPolygonMode obj (fromIntegral (fromEnum mode))
 
 
 foreign import ccall unsafe "wv2_camera_set_position"
@@ -513,6 +561,68 @@ materialGetTechnique (Material m) k =
   Technique <$> c_materialGetTechnique m (fromIntegral k)
 
 
+-- Overlay
+foreign import ccall unsafe "wv2_debug_overlay_get"
+  c_debugOverlayGet :: IO (Ptr Overlay')
+
+debugOverlayGet :: IO Overlay
+debugOverlayGet = Overlay <$> c_debugOverlayGet
+
+foreign import ccall unsafe "wv2_overlay_is_visible"
+  c_overlayIsVisible :: Ptr Overlay' -> IO CInt
+
+overlayIsVisible :: Overlay -> IO Bool
+overlayIsVisible (Overlay obj) = do
+  visible <- c_overlayIsVisible obj
+  return $ case visible of
+    0 -> False
+    _ -> True
+
+foreign import ccall unsafe "wv2_overlay_show"
+  c_overlayShow :: Ptr Overlay' -> IO ()
+
+overlayShow :: Overlay -> IO ()
+overlayShow (Overlay obj) = c_overlayShow obj
+
+foreign import ccall unsafe "wv2_overlay_hide"
+  c_overlayHide :: Ptr Overlay' -> IO ()
+
+overlayHide :: Overlay -> IO ()
+overlayHide (Overlay obj) = c_overlayHide obj
+
+
+-- Pass
+foreign import ccall unsafe "wv2_pass_set_scene_blending"
+  c_passSetSceneBlending :: Ptr Pass' -> CInt -> IO ()
+
+passSetSceneBlending :: Pass -> SceneBlendType -> IO ()
+passSetSceneBlending (Pass p) sbt = c_passSetSceneBlending p (fromIntegral (fromEnum sbt))
+
+
+foreign import ccall unsafe "wv2_pass_set_depth_write_enabled"
+  c_passSetDepthWriteEnabled :: Ptr Pass' -> CInt -> IO ()
+
+passSetDepthWriteEnabled :: Pass -> Bool -> IO ()
+passSetDepthWriteEnabled (Pass p) enabled = c_passSetDepthWriteEnabled p (fromIntegral (fromEnum enabled))
+
+
+-- RenderWindow
+foreign import ccall unsafe "wv2_render_window_get"
+  c_renderWindowGet :: IO (Ptr RenderWindow')
+
+renderWindowGet :: IO RenderWindow
+renderWindowGet = RenderWindow <$> c_renderWindowGet
+
+foreign import ccall unsafe "wv2_render_window_write_contents_to_timestamped_file"
+  c_renderWindowWriteContentsToTimestampedFile :: Ptr RenderWindow' -> CString -> CString -> IO ()
+
+renderWindowWriteContentsToTimestampedFile :: RenderWindow -> String -> String -> IO ()
+renderWindowWriteContentsToTimestampedFile (RenderWindow obj) name ext =
+  withCString name $ \cname ->
+  withCString ext $ \cext ->
+  c_renderWindowWriteContentsToTimestampedFile obj cname cext
+
+
 
 -- SceneNode
 foreign import ccall unsafe "wv2_scene_node_get_root"
@@ -574,21 +684,6 @@ sceneNodeSetVisible :: SceneNode -> Bool -> IO ()
 sceneNodeSetVisible (SceneNode sn) visible =
   c_sceneNodeSetVisible sn (fromIntegral (fromEnum visible))
 
-
-
--- Pass
-foreign import ccall unsafe "wv2_pass_set_scene_blending"
-  c_passSetSceneBlending :: Ptr Pass' -> CInt -> IO ()
-
-passSetSceneBlending :: Pass -> SceneBlendType -> IO ()
-passSetSceneBlending (Pass p) sbt = c_passSetSceneBlending p (fromIntegral (fromEnum sbt))
-
-
-foreign import ccall unsafe "wv2_pass_set_depth_write_enabled"
-  c_passSetDepthWriteEnabled :: Ptr Pass' -> CInt -> IO ()
-
-passSetDepthWriteEnabled :: Pass -> Bool -> IO ()
-passSetDepthWriteEnabled (Pass p) enabled = c_passSetDepthWriteEnabled p (fromIntegral (fromEnum enabled))
 
 
 -- Technique
