@@ -14,7 +14,9 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:     WtfViz
-  other-modules:       WtfViz.FFI
+  other-modules:       WtfViz.FFI.FFI
+                       WtfViz.FFI.Keyboard
+                       WtfViz.FFI.Mouse
 
   other-extensions:    DeriveGeneric
 

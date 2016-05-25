@@ -5,13 +5,29 @@
 extern "C" {
 #endif
 
-  void wv2_run_viz(HsFunPtr haskell_init, HsFunPtr haskell_update);
+  void wv2_run_viz(HsFunPtr haskell_init, HsFunPtr haskell_update,
+                   HsFunPtr haskell_key_pressed, HsFunPtr haskell_key_released,
+                   HsFunPtr haskell_mouse_pressed, HsFunPtr haskell_mouse_released,
+                   HsFunPtr haskell_mouse_moved);
   void wv2_set_extra_messages(char *msgs);
   void wv2_set_skybox(int some_bool, char *name);
+
+  // Camera
+  Ogre::Camera* wv2_camera_get();
+  void wv2_camera_look_at(Ogre::Camera *obj, double x, double y, double z);
+  void wv2_camera_set_position(Ogre::Camera *obj, double x, double y, double z);
+  void wv2_camera_set_orientation(Ogre::Camera *obj, double w, double x, double y, double z);
+  void wv2_camera_set_direction(Ogre::Camera *obj, double x, double y, double z);
+  void wv2_camera_set_near_clip_distance(Ogre::Camera *obj, double x);
+  void wv2_camera_set_far_clip_distance(Ogre::Camera *obj, double x);
 
   // Entity
   Ogre::Entity* wv2_entity_create(char *name, char *mesh_name);
   void wv2_entity_set_material_name(Ogre::Entity *obj, char *name);
+
+  // Keyboard
+  OIS::Keyboard* wv2_keyboard_get();
+  int wv2_keyboard_is_key_down(OIS::Keyboard *obj, int key);
 
   // Light
   void wv2_set_ambient_light(double r, double g, double b);
@@ -44,6 +60,9 @@ extern "C" {
   void wv2_manual_object_set_dynamic(Ogre::ManualObject *obj, int dynamic);
   void wv2_manual_object_set_visible(Ogre::ManualObject *obj, int visible);
 
+  // Mouse
+  int wv2_mouse_state_is_button_down(OIS::MouseState *obj, int button);
+
   // Pass
   void wv2_pass_set_scene_blending(Ogre::Pass *obj, int k);
   void wv2_pass_set_depth_write_enabled(Ogre::Pass *obj, int k);
@@ -67,14 +86,21 @@ extern "C" {
 
 int num_running = 0;
 
-void wv2_run_viz(HsFunPtr haskell_init, HsFunPtr haskell_update) {
+void wv2_run_viz(HsFunPtr haskell_init, HsFunPtr haskell_update,
+                 HsFunPtr haskell_key_pressed, HsFunPtr haskell_key_released,
+                 HsFunPtr haskell_mouse_pressed, HsFunPtr haskell_mouse_released,
+                 HsFunPtr haskell_mouse_moved)
+{
   if (num_running > 0) {
     printf("You can only run one of these at a time. I believe it's an OGRE limitation.");
   } else {
       try {
         num_running++;
         WtfViz2 viz;
-        viz.startViz(haskell_init, haskell_update);
+        viz.startViz(haskell_init, haskell_update,
+                     haskell_key_pressed, haskell_key_released,
+                     haskell_mouse_pressed,  haskell_mouse_released,
+                     haskell_mouse_moved);
       } catch (std::exception& e) {
         fprintf(stderr, "An exception has occurred: %s\n", e.what());
       }
@@ -90,6 +116,36 @@ void wv2_set_skybox(int some_bool, char *name) {
   OgreFramework::getSingletonPtr()->m_pSceneMgr->setSkyBox(some_bool, std::string(name));
 }
 
+// Camera
+Ogre::Camera* wv2_camera_get() {
+  return OgreFramework::getSingletonPtr()->m_pCamera;
+}
+
+void wv2_camera_look_at(Ogre::Camera *obj, double x, double y, double z) {
+  obj->lookAt(x, y, z);
+}
+
+void wv2_camera_set_position(Ogre::Camera *obj, double x, double y, double z) {
+  obj->setPosition(x, y, z);
+}
+
+void wv2_camera_set_orientation(Ogre::Camera *obj, double q0, double q1, double q2, double q3) {
+  obj->setOrientation(Ogre::Quaternion(q0, q1, q2, q3));
+}
+
+void wv2_camera_set_direction(Ogre::Camera *obj, double x, double y, double z) {
+  obj->setDirection(x, y, z);
+}
+
+void wv2_camera_set_near_clip_distance(Ogre::Camera *obj, double x) {
+  obj->setNearClipDistance(x);
+}
+
+void wv2_camera_set_far_clip_distance(Ogre::Camera *obj, double x) {
+  obj->setFarClipDistance(x);
+}
+
+
 // Entity
 Ogre::Entity* wv2_entity_create(char *name, char *mesh_name) {
   return OgreFramework::getSingletonPtr()->m_pSceneMgr->createEntity(std::string(name), std::string(mesh_name));
@@ -99,6 +155,15 @@ void wv2_entity_set_material_name(Ogre::Entity *obj, char *name) {
   obj->setMaterialName(std::string(name));
 }
 
+
+// Keyboard
+OIS::Keyboard* wv2_keyboard_get() {
+  return OgreFramework::getSingletonPtr()->m_pKeyboard;
+}
+
+int wv2_keyboard_is_key_down(OIS::Keyboard *obj, int key) {
+  return obj->isKeyDown(static_cast<OIS::KeyCode>(key));
+}
 
 // Light
 void wv2_set_ambient_light(double r, double g, double b) {
@@ -235,6 +300,11 @@ Ogre::Technique* wv2_material_get_technique(Ogre::Material *obj, int k) {
   return obj->getTechnique(k);
 }
 
+
+// MouseState
+int wv2_mouse_state_is_button_down(OIS::MouseState *obj, int button) {
+  return obj->buttonDown(static_cast<OIS::MouseButtonID>(button));
+}
 
 // Pass
 Ogre::SceneBlendType fromHaskellSceneBlendType(int haskellSceneBlendType) {

@@ -41,7 +41,6 @@ public:
                 OIS::KeyListener *pKeyListener = 0,
                 OIS::MouseListener *pMouseListener = 0);
   void updateOgre(double timeSinceLastFrame);
-  void setCamera();
   void getInput();
 
   bool isOgreToBeShutDown() const {return m_bShutDownOgre;}
@@ -79,20 +78,6 @@ private:
   int               m_iNumScreenShots;
 
   bool              m_bShutDownOgre;
-
-  Ogre::Vector3     m_TranslateVector;
-  Ogre::Real        m_MoveSpeed;
-  Ogre::Degree      m_RotateSpeed;
-  float             m_MoveScale;
-  Ogre::Degree      m_RotScale;
-
-  Ogre::Entity *m_focusSphere;
-  Ogre::SceneNode *m_focusSphereNode;
-
-  Ogre::Vector3 m_cameraFocus;
-  double m_cameraAzimuth;
-  double m_cameraElevation;
-  double m_cameraRadius;
 
   std::string extra_messages;
 };

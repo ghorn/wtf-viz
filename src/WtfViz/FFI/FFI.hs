@@ -1,14 +1,32 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# LANGUAGE DeriveGeneric #-}
 
-module WtfViz.FFI
+module WtfViz.FFI.FFI
        ( -- * main
-         runViz
+         VizRunner(..)
+       , Axis(..)
+       , runViz
+
+         -- * Camera
+       , Camera
+       , cameraGet
+       , cameraLookAt
+       , cameraSetPosition
+       , cameraSetOrientation
+       , cameraSetDirection
+       , cameraSetNearClipDistance
+       , cameraSetFarClipDistance
 
          -- * Entity
        , Entity
        , entityCreate
        , entitySetMaterialName
+
+         -- * Keyboard
+       , KeyCode(..)
+       , Keyboard
+       , getKeyboard
+       , isKeyDown
 
          -- * Light
        , createLight
@@ -43,6 +61,11 @@ module WtfViz.FFI
        , materialClone
        , materialGetTechnique
 
+         -- * Mouse
+       , MouseButton(..)
+       , MouseState
+       , isButtonDown
+
          -- * Pass
        , SceneBlendType(..)
        , passSetSceneBlending
@@ -71,10 +94,13 @@ module WtfViz.FFI
 import GHC.Generics ( Generic )
 
 import Data.IORef ( newIORef, readIORef, writeIORef )
-import Foreign.C.Types ( CInt(..), CDouble(..) )
+import Foreign.C.Types ( CInt(..), CUInt(..), CDouble(..) )
 import Foreign.C.String ( CString, withCString )
 import Foreign.Ptr ( FunPtr, Ptr )
 import Linear ( Quaternion(..), V3(..) )
+
+import WtfViz.FFI.Keyboard
+import WtfViz.FFI.Mouse
 
 data RenderOp
   = OT_POINT_LIST -- ^ A list of points, 1 vertex per point
@@ -92,6 +118,9 @@ data SceneBlendType
   | SBT_MODULATE -- ^ Multiply the 2 colours together
   | SBT_REPLACE -- ^ The default blend mode where source replaces destination
   deriving (Eq, Ord, Show, Enum, Generic)
+
+data Camera'
+newtype Camera = Camera (Ptr Camera')
 
 data Entity'
 newtype Entity = Entity (Ptr Entity')
@@ -120,25 +149,153 @@ newtype Technique = Technique (Ptr Technique')
 
 -- main
 foreign import ccall "wrapper"
-  c_wrapOgreCall :: IO () -> IO (FunPtr (IO ()))
+  c_wrapIOCall :: IO () -> IO (FunPtr (IO ()))
+
+foreign import ccall "wrapper"
+  c_wrapOgreUpdate :: (CDouble -> IO ()) -> IO (FunPtr (CDouble -> IO ()))
+
+foreign import ccall "wrapper"
+  c_wrapKeyEvent :: (CInt -> CUInt -> IO ())
+      -> IO (FunPtr (CInt -> CUInt -> IO ()))
+
+foreign import ccall "wrapper"
+  c_wrapMousePressedOrReleased :: (CInt -> IO ())
+                    -> IO (FunPtr (CInt -> IO ()))
+
+foreign import ccall "wrapper"
+  c_wrapMouseMoved :: (Ptr MouseState' -> CInt -> CInt -> CInt -> CInt -> CInt -> CInt -> IO ())
+        -> IO (FunPtr (Ptr MouseState' -> CInt -> CInt -> CInt -> CInt -> CInt -> CInt -> IO ()))
 
 foreign import ccall safe "wv2_run_viz"
-  c_runViz :: FunPtr (IO ()) -> FunPtr (IO ()) -> IO ()
+  c_runViz :: FunPtr (IO ()) -- init
+           -> FunPtr (CDouble -> IO ()) -- update
+           -> FunPtr (CInt -> CUInt -> IO ()) -- key pressed
+           -> FunPtr (CInt -> CUInt -> IO ()) -- key released
+           -> FunPtr (CInt -> IO ()) -- mouse pressed
+           -> FunPtr (CInt -> IO ()) -- mouse released
+           -> FunPtr (Ptr MouseState' -> CInt -> CInt -> CInt -> CInt -> CInt -> CInt -> IO ()) -- mouse moved
+           -> IO ()
 
-runViz :: IO a -> (a -> IO a) -> IO ()
-runViz initialize update = do
+data VizRunner a =
+  VizRunner
+  { vizInitialize :: IO a
+  , vizUpdate :: Double -> a -> IO a
+  , vizKeyPressed :: KeyCode -> CUInt -> a -> IO a
+  , vizKeyReleased :: KeyCode -> CUInt -> a -> IO a
+  , vizMousePressed :: MouseButton -> a -> IO a
+  , vizMouseReleased :: MouseButton -> a -> IO a
+  , vizMouseMoved :: (MouseButton -> IO Bool) -> Axis CInt -> Axis CInt -> Axis CInt -> a -> IO a
+  }
+
+runViz :: VizRunner a -> IO ()
+runViz vizRunner = do
   stateRef <- newIORef (error "should never be accessed")
 
-  initPtr <- c_wrapOgreCall $ do
-    initialState <- initialize
+  initPtr <- c_wrapIOCall $ do
+    initialState <- vizInitialize vizRunner
     writeIORef stateRef initialState
 
-  updatePtr <- c_wrapOgreCall $ do
+  updatePtr <- c_wrapOgreUpdate $ \timeSinceLastFrame -> do
     state0 <- readIORef stateRef
-    state1 <- update state0
+    state1 <- vizUpdate vizRunner (realToFrac timeSinceLastFrame) state0
     writeIORef stateRef state1
 
-  c_runViz initPtr updatePtr
+  keyPressedPtr <- c_wrapKeyEvent $ \keyCode keyText -> do
+    state0 <- readIORef stateRef
+    state1 <- vizKeyPressed vizRunner (toEnum (fromIntegral keyCode)) keyText state0
+    writeIORef stateRef state1
+
+  keyReleasedPtr <- c_wrapKeyEvent $ \keyCode keyText -> do
+    state0 <- readIORef stateRef
+    state1 <- vizKeyReleased vizRunner (toEnum (fromIntegral keyCode)) keyText state0
+    writeIORef stateRef state1
+
+  mousePressedPtr <- c_wrapMousePressedOrReleased $ \button -> do
+    state0 <- readIORef stateRef
+    state1 <- vizMousePressed vizRunner (toEnum (fromIntegral button)) state0
+    writeIORef stateRef state1
+
+  mouseReleasedPtr <- c_wrapMousePressedOrReleased $ \button -> do
+    state0 <- readIORef stateRef
+    state1 <- vizMouseReleased vizRunner (toEnum (fromIntegral button)) state0
+    writeIORef stateRef state1
+
+  mouseMovedPtr <- c_wrapMouseMoved $ \mouseState xrel xabs yrel yabs zrel zabs -> do
+    state0 <- readIORef stateRef
+    let xaxis =
+          Axis
+          { axisRel = xrel
+          , axisAbs = xabs
+          }
+        yaxis =
+          Axis
+          { axisRel = yrel
+          , axisAbs = yabs
+          }
+        zaxis =
+          Axis
+          { axisRel = zrel
+          , axisAbs = zabs
+          }
+    state1 <- vizMouseMoved vizRunner (isButtonDown (MouseState mouseState)) xaxis yaxis zaxis state0
+    writeIORef stateRef state1
+
+  c_runViz initPtr updatePtr keyPressedPtr keyReleasedPtr mousePressedPtr mouseReleasedPtr mouseMovedPtr
+
+
+
+-- Camera
+foreign import ccall unsafe "wv2_camera_get"
+  c_cameraGet :: IO (Ptr Camera')
+
+cameraGet :: IO Camera
+cameraGet = Camera <$> c_cameraGet
+
+
+foreign import ccall unsafe "wv2_camera_look_at"
+  c_cameraLookAt :: Ptr Camera' -> CDouble -> CDouble -> CDouble -> IO ()
+
+cameraLookAt :: Camera -> Double -> Double -> Double -> IO ()
+cameraLookAt (Camera obj) x y z =
+  c_cameraLookAt obj (realToFrac x) (realToFrac y) (realToFrac z)
+
+
+foreign import ccall unsafe "wv2_camera_set_position"
+  c_cameraSetPosition :: Ptr Camera' -> CDouble -> CDouble -> CDouble -> IO ()
+
+cameraSetPosition :: Camera -> Double -> Double -> Double -> IO ()
+cameraSetPosition (Camera obj) x y z =
+  c_cameraSetPosition obj (realToFrac x) (realToFrac y) (realToFrac z)
+
+
+foreign import ccall unsafe "wv2_camera_set_direction"
+  c_cameraSetDirection :: Ptr Camera' -> CDouble -> CDouble -> CDouble -> IO ()
+
+cameraSetDirection :: Camera -> Double -> Double -> Double -> IO ()
+cameraSetDirection (Camera obj) x y z =
+  c_cameraSetDirection obj (realToFrac x) (realToFrac y) (realToFrac z)
+
+
+foreign import ccall unsafe "wv2_camera_set_orientation"
+  c_cameraSetOrientation :: Ptr Camera' -> CDouble -> CDouble -> CDouble -> CDouble -> IO ()
+
+cameraSetOrientation :: Camera -> Double -> Double -> Double -> Double -> IO ()
+cameraSetOrientation (Camera obj) q0 q1 q2 q3 =
+  c_cameraSetOrientation obj (realToFrac q0) (realToFrac q1) (realToFrac q2) (realToFrac q3)
+
+foreign import ccall unsafe "wv2_camera_set_near_clip_distance"
+  c_cameraSetNearClipDistance :: Ptr Camera' -> CDouble -> IO ()
+
+cameraSetNearClipDistance :: Camera -> Double -> IO ()
+cameraSetNearClipDistance (Camera obj) x =
+  c_cameraSetNearClipDistance obj (realToFrac x)
+
+foreign import ccall unsafe "wv2_camera_set_far_clip_distance"
+  c_cameraSetFarClipDistance :: Ptr Camera' -> CDouble -> IO ()
+
+cameraSetFarClipDistance :: Camera -> Double -> IO ()
+cameraSetFarClipDistance (Camera obj) x =
+  c_cameraSetFarClipDistance obj (realToFrac x)
 
 
 

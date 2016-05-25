@@ -10,7 +10,7 @@ module WtfViz
 
 import Linear ( V3(..), V4(..), Quaternion(..) )
 
-import WtfViz.FFI as WV
+import WtfViz.FFI.FFI as WV
 
 data Mesh =
   Mesh

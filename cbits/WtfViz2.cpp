@@ -14,11 +14,24 @@ WtfViz2::~WtfViz2() {
   delete OgreFramework::getSingletonPtr();
 }
 
-typedef void (*hs_callback_thing)();
+typedef void (*hs_init_callback)();
+typedef void (*hs_update_callback)(double);
+typedef void (*hs_keyboard_event)(int, unsigned int);
+typedef void (*hs_mouse_pressed_or_released)(int);
+typedef void (*hs_mouse_moved)(const OIS::MouseState*, int, int, int, int, int, int);
 
-void WtfViz2::startViz(HsFunPtr haskell_init, HsFunPtr haskell_update) {
+void WtfViz2::startViz(HsFunPtr haskell_init, HsFunPtr haskell_update,
+                       HsFunPtr haskell_key_pressed, HsFunPtr haskell_key_released,
+                       HsFunPtr haskell_mouse_pressed, HsFunPtr haskell_mouse_released,
+                       HsFunPtr haskell_mouse_moved) {
+  m_haskell_key_pressed = haskell_key_pressed;
+  m_haskell_key_released = haskell_key_released;
+  m_haskell_mouse_pressed = haskell_mouse_pressed;
+  m_haskell_mouse_released = haskell_mouse_released;
+  m_haskell_mouse_moved = haskell_mouse_moved;
+
   new OgreFramework();
-  if (!OgreFramework::getSingletonPtr()->initOgre("wtf-viz v2.0", this, 0))
+  if (!OgreFramework::getSingletonPtr()->initOgre("wtf-viz v2.0", this, this))
     return;
 
   m_bShutdown = false;
@@ -26,7 +39,7 @@ void WtfViz2::startViz(HsFunPtr haskell_init, HsFunPtr haskell_update) {
   OgreFramework::getSingletonPtr()->m_pLog->logMessage("wtf-viz initialized!");
 
   OgreFramework::getSingletonPtr()->m_pLog->logMessage("Calling haskell init...");
-  ((hs_callback_thing)haskell_init)();
+  ((hs_init_callback)haskell_init)();
   OgreFramework::getSingletonPtr()->m_pLog->logMessage("Start main loop...");
 
   double timeSinceLastFrame = 0;
@@ -50,7 +63,7 @@ void WtfViz2::startViz(HsFunPtr haskell_init, HsFunPtr haskell_update) {
       OgreFramework::getSingletonPtr()->m_pRoot->renderOneFrame();
 
       // get messages
-      ((hs_callback_thing)haskell_update)();
+      ((hs_update_callback)haskell_update)(timeSinceLastFrame);
 
       timeSinceLastFrame =
         OgreFramework::getSingletonPtr()->m_pTimer->getMillisecondsCPU() - startTime;
@@ -65,6 +78,8 @@ void WtfViz2::startViz(HsFunPtr haskell_init, HsFunPtr haskell_update) {
 
 
 bool WtfViz2::keyPressed(const OIS::KeyEvent &keyEventRef) {
+  ((hs_keyboard_event)m_haskell_key_pressed)(static_cast<int>(keyEventRef.key), keyEventRef.text);
+
   OgreFramework::getSingletonPtr()->keyPressed(keyEventRef);
 
   if (OgreFramework::getSingletonPtr()->m_pKeyboard->isKeyDown(OIS::KC_F)) {
@@ -75,7 +90,35 @@ bool WtfViz2::keyPressed(const OIS::KeyEvent &keyEventRef) {
 }
 
 bool WtfViz2::keyReleased(const OIS::KeyEvent &keyEventRef) {
+  ((hs_keyboard_event)m_haskell_key_released)(static_cast<int>(keyEventRef.key), keyEventRef.text);
   OgreFramework::getSingletonPtr()->keyReleased(keyEventRef);
 
+  return true;
+}
+
+bool WtfViz2::mouseMoved(const OIS::MouseEvent &evt) {
+  const OIS::MouseState *mouse_state = &(OgreFramework::getSingletonPtr()->m_pMouse->getMouseState());
+  ((hs_mouse_moved)m_haskell_mouse_moved)(mouse_state,
+                                          evt.state.X.rel, evt.state.X.abs,
+                                          evt.state.Y.rel, evt.state.Y.abs,
+                                          evt.state.Z.rel, evt.state.Z.abs);
+  OgreFramework::getSingletonPtr()->mouseMoved(evt);
+
+  return true;
+}
+
+
+
+bool WtfViz2::mousePressed(const OIS::MouseEvent &evt,
+                                 OIS::MouseButtonID id) {
+  ((hs_mouse_pressed_or_released)m_haskell_mouse_pressed)(static_cast<int>(id));
+  OgreFramework::getSingletonPtr()->mousePressed(evt, id);
+  return true;
+}
+
+bool WtfViz2::mouseReleased(const OIS::MouseEvent &evt,
+                                  OIS::MouseButtonID id) {
+  ((hs_mouse_pressed_or_released)m_haskell_mouse_released)(static_cast<int>(id));
+  OgreFramework::getSingletonPtr()->mouseReleased(evt, id);
   return true;
 }

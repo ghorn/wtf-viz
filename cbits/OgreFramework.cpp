@@ -17,9 +17,6 @@
 template<> OgreFramework* Ogre::Singleton<OgreFramework>::msSingleton = 0;
 
 OgreFramework::OgreFramework() {
-  m_MoveSpeed       = 0.1f;
-  m_RotateSpeed     = 0.3f;
-
   m_bShutDownOgre   = false;
   m_iNumScreenShots = 0;
 
@@ -35,18 +32,10 @@ OgreFramework::OgreFramework() {
   m_pKeyboard       = 0;
   m_pMouse          = 0;
 
-  m_focusSphere = 0;
-  m_focusSphereNode = 0;
-
   //  m_pTrayMgr        = 0;
   m_FrameEvent      = Ogre::FrameEvent();
 
   m_debugOverlay = 0;
-
-  m_cameraFocus = Ogre::Vector3::ZERO;
-  m_cameraAzimuth = 0;
-  m_cameraElevation = 0;
-  m_cameraRadius = 100;
 }
 
 bool OgreFramework::initOgre(Ogre::String wndTitle,
@@ -101,8 +90,8 @@ bool OgreFramework::initOgre(Ogre::String wndTitle,
   m_pMouse =
     static_cast<OIS::Mouse*>(m_pInputMgr->createInputObject(OIS::OISMouse, true));
 
-  m_pMouse->getMouseState().height = m_pRenderWnd->getHeight();
-  m_pMouse->getMouseState().width  = m_pRenderWnd->getWidth();
+//  m_pMouse->getMouseState().height = m_pRenderWnd->getHeight();
+//  m_pMouse->getMouseState().width  = m_pRenderWnd->getWidth();
 
   if (pKeyListener == 0)
     m_pKeyboard->setEventCallback(this);
@@ -196,22 +185,6 @@ bool OgreFramework::initOgre(Ogre::String wndTitle,
   // Set window active
   m_pRenderWnd->setActive(true);
 
-  // Make a sphere which we'll use for focusing.
-  m_focusSphere =
-    OgreFramework::getSingletonPtr()->m_pSceneMgr->createEntity("focus_sphere",
-                                                                "sphere.mesh");
-  m_focusSphereNode =
-    OgreFramework::getSingletonPtr()->m_pSceneMgr->getRootSceneNode()->
-    createChildSceneNode("focus_sphere_node");
-  m_focusSphereNode->attachObject(m_focusSphere);
-  m_focusSphereNode->setVisible(false);
-
-  // set NED
-  Ogre::Quaternion ogre2ned(sqrt(2)/2, sqrt(2)/2, 0, 0);
-  OgreFramework::getSingletonPtr()->m_pSceneMgr->getRootSceneNode()->setOrientation(ogre2ned);
-
-  // set initial camera
-  setCamera();
   return true;
 }
 
@@ -226,8 +199,6 @@ OgreFramework::~OgreFramework() {
 
 
 bool OgreFramework::keyPressed(const OIS::KeyEvent &keyEventRef __attribute__((unused))) {
-  // std::cout << "key pressed: (" << keyEventRef.key << ", "
-  //           << keyEventRef.text << ")" << std::endl;
   if (m_pKeyboard->isKeyDown(OIS::KC_ESCAPE)) {
     m_bShutDownOgre = true;
     return true;
@@ -287,41 +258,7 @@ bool OgreFramework::keyReleased(const OIS::KeyEvent &keyEventRef __attribute__((
 }
 
 
-bool OgreFramework::mouseMoved(const OIS::MouseEvent &evt) {
-  //printf("mouse moved: dx: %d, dy: %d\n", evt.state.X.rel, evt.state.Y.rel);
-  if (m_pMouse->getMouseState().buttonDown(OIS::MB_Left)) {
-    m_cameraAzimuth   += 0.01 * evt.state.X.rel;
-    m_cameraElevation -= 0.01 * evt.state.Y.rel;
-
-    m_cameraElevation = std::min(0.5*M_PI, m_cameraElevation);
-    m_cameraElevation = std::max(-0.5*M_PI, m_cameraElevation);
-  }
-
-  // scale radius by radius for dynamic range
-  m_cameraRadius -= 0.0007*m_cameraRadius*evt.state.Z.rel;
-  m_cameraRadius = std::max(1e-6, m_cameraRadius);
-
-  if (m_pMouse->getMouseState().buttonDown(OIS::MB_Right)) {
-    // scale translation for dynamic range
-    double scale = 0.001 * m_cameraRadius;
-    double dx = evt.state.X.rel;
-    double dy = evt.state.Y.rel;
-    double ca = cos(m_cameraAzimuth);
-    double sa = sin(m_cameraAzimuth);
-    m_cameraFocus.x -= scale*(dy*ca + dx*sa);
-    m_cameraFocus.y -= scale*(dy*sa - dx*ca);
-  }
-
-  if (m_pMouse->getMouseState().buttonDown(OIS::MB_Middle)) {
-    // scale translation for dynamic range
-    double scale = 0.001 * m_cameraRadius;
-    m_cameraFocus.z -= scale * evt.state.Y.rel;
-  }
-
-  double s = 1e-4*m_cameraRadius;
-  m_focusSphereNode->setScale(s, s, s);
-  m_focusSphereNode->setPosition(m_cameraFocus.x, m_cameraFocus.y, m_cameraFocus.z);
-
+bool OgreFramework::mouseMoved(const OIS::MouseEvent &evt __attribute__((unused))) {
   return true;
 }
 
@@ -329,14 +266,11 @@ bool OgreFramework::mouseMoved(const OIS::MouseEvent &evt) {
 
 bool OgreFramework::mousePressed(const OIS::MouseEvent &evt __attribute__((unused)),
                                  OIS::MouseButtonID id __attribute__((unused))) {
-  // TODO(greg): This should be optional.
-  m_focusSphereNode->setVisible(true);
   return true;
 }
 
 bool OgreFramework::mouseReleased(const OIS::MouseEvent &evt  __attribute__((unused)),
                                   OIS::MouseButtonID id __attribute__((unused))) {
-  m_focusSphereNode->setVisible(false);
   return true;
 }
 
@@ -347,14 +281,6 @@ void OgreFramework::setExtraMessages(char *msgs) {
 
 
 void OgreFramework::updateOgre(double timeSinceLastFrame) {
-  m_MoveScale = m_MoveSpeed   * static_cast<float>(timeSinceLastFrame);
-  m_RotScale  = m_RotateSpeed * static_cast<float>(timeSinceLastFrame);
-
-  m_TranslateVector = Ogre::Vector3::ZERO;
-
-  getInput();
-  setCamera();
-
   m_FrameEvent.timeSinceLastFrame = timeSinceLastFrame;
   //  m_pTrayMgr->frameRenderingQueued(m_FrameEvent);
 
@@ -374,37 +300,4 @@ void OgreFramework::updateOgre(double timeSinceLastFrame) {
   }
 
   m_debugText->setCaption(os.str());
-}
-
-
-
-void OgreFramework::setCamera() {
-  double se = sin(m_cameraElevation);
-  double ce = cos(m_cameraElevation);
-  double sa = sin(m_cameraAzimuth);
-  double ca = cos(m_cameraAzimuth);
-  Ogre::Vector3 camera_pos_ned(m_cameraRadius*ce*ca, m_cameraRadius*ce*sa, m_cameraRadius*se);
-  Ogre::Vector3 camera_pos_ogre(camera_pos_ned.x, -camera_pos_ned.z, camera_pos_ned.y);
-  Ogre::Vector3 camera_focus_ogre(m_cameraFocus.x, -m_cameraFocus.z, m_cameraFocus.y);
-
-  m_pCamera->setPosition(camera_focus_ogre + camera_pos_ogre);
-  m_pCamera->setDirection(-camera_pos_ogre);
-
-  //    m_pCamera->setNearClipDistance(1);
-  //    m_pCamera->setFarClipDistance(1);
-}
-
-
-void OgreFramework::getInput() {
-  if (m_pKeyboard->isKeyDown(OIS::KC_A))
-    m_TranslateVector.x = -m_MoveScale;
-
-  if (m_pKeyboard->isKeyDown(OIS::KC_D))
-    m_TranslateVector.x = m_MoveScale;
-
-  if (m_pKeyboard->isKeyDown(OIS::KC_W))
-    m_TranslateVector.z = -m_MoveScale;
-
-  if (m_pKeyboard->isKeyDown(OIS::KC_S))
-    m_TranslateVector.z = m_MoveScale;
 }
