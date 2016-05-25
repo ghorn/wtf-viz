@@ -9,15 +9,15 @@
 #include "HsFFI.h"
 
 class WtfViz2 : public OIS::KeyListener {
- public:
-    WtfViz2();
-    ~WtfViz2();
+public:
+  WtfViz2();
+  ~WtfViz2();
 
-    void startViz(HsFunPtr haskell_init, HsFunPtr haskell_update);
+  void startViz(HsFunPtr haskell_init, HsFunPtr haskell_update);
 
-    bool keyPressed(const OIS::KeyEvent &keyEventRef);
-    bool keyReleased(const OIS::KeyEvent &keyEventRef);
+  bool keyPressed(const OIS::KeyEvent &keyEventRef);
+  bool keyReleased(const OIS::KeyEvent &keyEventRef);
 
- private:
-    bool m_bShutdown;
+private:
+  bool m_bShutdown;
 };
