@@ -50,8 +50,8 @@ updateLine (Line {lineManualObject = obj}) material renderOp nodes = do
   WV.manualObjectEstimateVertexCount obj (length nodes)
   -- TODO(greg): beginUpdate instead of begin
   WV.manualObjectBegin obj material renderOp
-  let posCol (V3 x y z, V4 r g b a) = do
-        WV.manualObjectPosition obj x y z
+  let posCol (pos, V4 r g b a) = do
+        WV.manualObjectPosition obj pos
         WV.manualObjectColour obj r g b a
   mapM_ posCol nodes
   WV.manualObjectEnd obj
@@ -72,7 +72,7 @@ newMesh description meshName = do
   return mesh
 
 updateMesh :: Mesh -> (V3 Double, V3 Double, Quaternion Double) -> IO ()
-updateMesh (Mesh {meshSceneNode = sn}) (V3 px py pz, V3 sx sy sz, quat) = do
-  WV.sceneNodeSetPosition sn px py pz
-  WV.sceneNodeSetScale sn sx sy sz
+updateMesh (Mesh {meshSceneNode = sn}) (pos, scale, quat) = do
+  WV.sceneNodeSetPosition sn pos
+  WV.sceneNodeSetScale sn scale
   WV.sceneNodeSetOrientation sn quat

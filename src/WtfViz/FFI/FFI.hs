@@ -300,8 +300,8 @@ cameraGet = Camera <$> c_cameraGet
 foreign import ccall unsafe "wv2_camera_look_at"
   c_cameraLookAt :: Ptr Camera' -> CDouble -> CDouble -> CDouble -> IO ()
 
-cameraLookAt :: Camera -> Double -> Double -> Double -> IO ()
-cameraLookAt (Camera obj) x y z =
+cameraLookAt :: Camera -> V3 Double -> IO ()
+cameraLookAt (Camera obj) (V3 x y z) =
   c_cameraLookAt obj (realToFrac x) (realToFrac y) (realToFrac z)
 
 
@@ -316,24 +316,24 @@ cameraSetPolygonMode (Camera obj) mode =
 foreign import ccall unsafe "wv2_camera_set_position"
   c_cameraSetPosition :: Ptr Camera' -> CDouble -> CDouble -> CDouble -> IO ()
 
-cameraSetPosition :: Camera -> Double -> Double -> Double -> IO ()
-cameraSetPosition (Camera obj) x y z =
+cameraSetPosition :: Camera -> V3 Double -> IO ()
+cameraSetPosition (Camera obj) (V3 x y z) =
   c_cameraSetPosition obj (realToFrac x) (realToFrac y) (realToFrac z)
 
 
 foreign import ccall unsafe "wv2_camera_set_direction"
   c_cameraSetDirection :: Ptr Camera' -> CDouble -> CDouble -> CDouble -> IO ()
 
-cameraSetDirection :: Camera -> Double -> Double -> Double -> IO ()
-cameraSetDirection (Camera obj) x y z =
+cameraSetDirection :: Camera -> V3 Double -> IO ()
+cameraSetDirection (Camera obj) (V3 x y z) =
   c_cameraSetDirection obj (realToFrac x) (realToFrac y) (realToFrac z)
 
 
 foreign import ccall unsafe "wv2_camera_set_orientation"
   c_cameraSetOrientation :: Ptr Camera' -> CDouble -> CDouble -> CDouble -> CDouble -> IO ()
 
-cameraSetOrientation :: Camera -> Double -> Double -> Double -> Double -> IO ()
-cameraSetOrientation (Camera obj) q0 q1 q2 q3 =
+cameraSetOrientation :: Camera -> Quaternion Double -> IO ()
+cameraSetOrientation (Camera obj) (Quaternion q0 (V3 q1 q2 q3)) =
   c_cameraSetOrientation obj (realToFrac q0) (realToFrac q1) (realToFrac q2) (realToFrac q3)
 
 foreign import ccall unsafe "wv2_camera_set_near_clip_distance"
@@ -392,15 +392,15 @@ setAmbientLight r g b = c_setAmbientLight (realToFrac r) (realToFrac g) (realToF
 foreign import ccall unsafe "wv2_light_set_position"
   c_lightSetPosition :: Ptr Light' -> CDouble -> CDouble -> CDouble -> IO ()
 
-lightSetPosition :: Light -> Double -> Double -> Double -> IO ()
-lightSetPosition (Light obj) x y z = c_lightSetPosition obj (realToFrac x) (realToFrac y) (realToFrac z)
+lightSetPosition :: Light -> V3 Double -> IO ()
+lightSetPosition (Light obj) (V3 x y z) = c_lightSetPosition obj (realToFrac x) (realToFrac y) (realToFrac z)
 
 
 foreign import ccall unsafe "wv2_light_set_direction"
   c_lightSetDirection :: Ptr Light' -> CDouble -> CDouble -> CDouble -> IO ()
 
-lightSetDirection :: Light -> Double -> Double -> Double -> IO ()
-lightSetDirection (Light obj) x y z = c_lightSetDirection obj (realToFrac x) (realToFrac y) (realToFrac z)
+lightSetDirection :: Light -> V3 Double -> IO ()
+lightSetDirection (Light obj) (V3 x y z) = c_lightSetDirection obj (realToFrac x) (realToFrac y) (realToFrac z)
 
 
 foreign import ccall unsafe "wv2_light_set_diffuse_colour"
@@ -455,24 +455,24 @@ manualObjectBeginUpdate (ManualObject mo) k =
 foreign import ccall unsafe "wv2_manual_object_position"
   c_manualObjectPosition :: Ptr ManualObject' -> CDouble -> CDouble -> CDouble -> IO ()
 
-manualObjectPosition :: ManualObject -> Double -> Double -> Double -> IO ()
-manualObjectPosition (ManualObject mo) x y z =
+manualObjectPosition :: ManualObject -> V3 Double -> IO ()
+manualObjectPosition (ManualObject mo) (V3 x y z) =
   c_manualObjectPosition mo (realToFrac x) (realToFrac y) (realToFrac z)
 
 
 foreign import ccall unsafe "wv2_manual_object_normal"
   c_manualObjectNormal :: Ptr ManualObject' -> CDouble -> CDouble -> CDouble -> IO ()
 
-manualObjectNormal :: ManualObject -> Double -> Double -> Double -> IO ()
-manualObjectNormal (ManualObject mo) x y z =
+manualObjectNormal :: ManualObject -> V3 Double -> IO ()
+manualObjectNormal (ManualObject mo) (V3 x y z) =
   c_manualObjectNormal mo (realToFrac x) (realToFrac y) (realToFrac z)
 
 
 foreign import ccall unsafe "wv2_manual_object_tangent"
   c_manualObjectTangent :: Ptr ManualObject' -> CDouble -> CDouble -> CDouble -> IO ()
 
-manualObjectTangent :: ManualObject -> Double -> Double -> Double -> IO ()
-manualObjectTangent (ManualObject mo) x y z =
+manualObjectTangent :: ManualObject -> V3 Double -> IO ()
+manualObjectTangent (ManualObject mo) (V3 x y z) =
   c_manualObjectTangent mo (realToFrac x) (realToFrac y) (realToFrac z)
 
 
@@ -661,16 +661,16 @@ sceneNodeAttachManualObject (SceneNode sn) (ManualObject mo) = c_sceneNodeAttach
 foreign import ccall unsafe "wv2_scene_node_set_position"
   c_sceneNodeSetPosition :: Ptr SceneNode' -> CDouble -> CDouble -> CDouble -> IO ()
 
-sceneNodeSetPosition :: SceneNode -> Double -> Double -> Double -> IO ()
-sceneNodeSetPosition (SceneNode sn) x y z =
+sceneNodeSetPosition :: SceneNode -> V3 Double -> IO ()
+sceneNodeSetPosition (SceneNode sn) (V3 x y z) =
   c_sceneNodeSetPosition sn (realToFrac x) (realToFrac y) (realToFrac z)
 
 
 foreign import ccall unsafe "wv2_scene_node_set_scale"
   c_sceneNodeSetScale :: Ptr SceneNode' -> CDouble -> CDouble -> CDouble -> IO ()
 
-sceneNodeSetScale :: SceneNode -> Double -> Double -> Double -> IO ()
-sceneNodeSetScale (SceneNode sn) x y z =
+sceneNodeSetScale :: SceneNode -> V3 Double -> IO ()
+sceneNodeSetScale (SceneNode sn) (V3 x y z) =
   c_sceneNodeSetScale sn (realToFrac x) (realToFrac y) (realToFrac z)
 
 
