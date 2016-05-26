@@ -81,7 +81,7 @@ extern "C" {
 
   // SceneNode
   Ogre::SceneNode* wv2_scene_node_get_root();
-  Ogre::SceneNode* wv2_scene_node_create_child(Ogre::SceneNode *node, char *name);
+  Ogre::SceneNode* wv2_scene_node_create_child_scene_node(Ogre::SceneNode *node, char *name);
   void wv2_scene_node_attach_camera(Ogre::SceneNode *node, Ogre::Camera *camera);
   void wv2_scene_node_attach_entity(Ogre::SceneNode *node, Ogre::Entity *entity);
   void wv2_scene_node_attach_manual_object(Ogre::SceneNode *node, Ogre::ManualObject *obj);
@@ -412,7 +412,7 @@ Ogre::SceneNode* wv2_scene_node_get_root() {
   return OgreFramework::getSingletonPtr()->m_pSceneMgr->getRootSceneNode();
 }
 
-Ogre::SceneNode* wv2_scene_node_create_child(Ogre::SceneNode *node, char *name) {
+Ogre::SceneNode* wv2_scene_node_create_child_scene_node(Ogre::SceneNode *node, char *name) {
   return node->createChildSceneNode(std::string(name));
 }
 

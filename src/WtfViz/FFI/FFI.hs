@@ -88,7 +88,7 @@ module WtfViz.FFI.FFI
          -- * SceneNode
        , SceneNode
        , sceneNodeGetRoot
-       , sceneNodeCreateChild
+       , sceneNodeCreateChildSceneNode
        , sceneNodeAttachCamera
        , sceneNodeAttachEntity
        , sceneNodeAttachManualObject
@@ -638,11 +638,12 @@ sceneNodeGetRoot :: IO SceneNode
 sceneNodeGetRoot = SceneNode <$> c_sceneNodeGetRoot
 
 
-foreign import ccall unsafe "wv2_scene_node_create_child"
-  c_sceneNodeCreateChild :: Ptr SceneNode' -> CString -> IO (Ptr SceneNode')
+foreign import ccall unsafe "wv2_scene_node_create_child_scene_node"
+  c_sceneNodeCreateChildSceneNode :: Ptr SceneNode' -> CString -> IO (Ptr SceneNode')
 
-sceneNodeCreateChild :: SceneNode -> String -> IO SceneNode
-sceneNodeCreateChild (SceneNode sn) name = SceneNode <$> (withCString name $ c_sceneNodeCreateChild sn)
+sceneNodeCreateChildSceneNode :: SceneNode -> String -> IO SceneNode
+sceneNodeCreateChildSceneNode (SceneNode sn) name =
+  SceneNode <$> (withCString name $ c_sceneNodeCreateChildSceneNode sn)
 
 
 foreign import ccall unsafe "wv2_scene_node_attach_camera"
