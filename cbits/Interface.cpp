@@ -89,6 +89,10 @@ extern "C" {
   void wv2_scene_node_set_orientation(Ogre::SceneNode *node, double q0, double q1, double q2, double q3);
   void wv2_scene_node_set_visible(Ogre::SceneNode *node, int visible);
 
+  void wv2_scene_node_get_position(Ogre::SceneNode *node, double *x, double *y, double *z);
+  void wv2_scene_node_get_scale(Ogre::SceneNode *node, double *x, double *y, double *z);
+  void wv2_scene_node_get_orientation(Ogre::SceneNode *node, double *q0, double *q1, double *q2, double *q3);
+
   // Technique
   Ogre::Pass* wv2_technique_get_pass(Ogre::Technique *obj, int k);
 
@@ -433,6 +437,28 @@ void wv2_scene_node_set_scale(Ogre::SceneNode *node, double x, double y, double 
 
 void wv2_scene_node_set_orientation(Ogre::SceneNode *node, double q0, double q1, double q2, double q3) {
   node->setOrientation(q0, q1, q2, q3);
+}
+
+void wv2_scene_node_get_position(Ogre::SceneNode *node, double *x, double *y, double *z) {
+  const Ogre::Vector3 &pos = node->getPosition();
+  *x = pos.x;
+  *y = pos.y;
+  *z = pos.z;
+}
+
+void wv2_scene_node_get_scale(Ogre::SceneNode *node, double *x, double *y, double *z) {
+  const Ogre::Vector3 &scale = node->getScale();
+  *x = scale.x;
+  *y = scale.y;
+  *z = scale.z;
+}
+
+void wv2_scene_node_get_orientation(Ogre::SceneNode *node, double *q0, double *q1, double *q2, double *q3) {
+  const Ogre::Quaternion &quat = node->getOrientation();
+  *q0 = quat.w;
+  *q1 = quat.x;
+  *q2 = quat.y;
+  *q3 = quat.z;
 }
 
 

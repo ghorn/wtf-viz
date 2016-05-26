@@ -95,6 +95,9 @@ module WtfViz.FFI.FFI
        , sceneNodeSetScale
        , sceneNodeSetOrientation
        , sceneNodeSetVisible
+       , sceneNodeGetPosition
+       , sceneNodeGetScale
+       , sceneNodeGetOrientation
 
          -- * Technique
        , Technique
@@ -110,6 +113,8 @@ import GHC.Generics ( Generic )
 import Data.IORef ( newIORef, readIORef, writeIORef )
 import Foreign.C.Types ( CInt(..), CUInt(..), CDouble(..) )
 import Foreign.C.String ( CString, withCString )
+import Foreign.Marshal.Alloc ( alloca )
+import Foreign.Storable ( peek )
 import Foreign.Ptr ( FunPtr, Ptr )
 import Linear ( Quaternion(..), V3(..) )
 
@@ -684,6 +689,45 @@ sceneNodeSetVisible :: SceneNode -> Bool -> IO ()
 sceneNodeSetVisible (SceneNode sn) visible =
   c_sceneNodeSetVisible sn (fromIntegral (fromEnum visible))
 
+
+foreign import ccall unsafe "wv2_scene_node_get_position"
+  c_sceneNodeGetPosition :: Ptr SceneNode' -> Ptr CDouble -> Ptr CDouble -> Ptr CDouble -> IO ()
+
+sceneNodeGetPosition :: SceneNode -> IO (V3 Double)
+sceneNodeGetPosition (SceneNode sn) =
+  alloca $ \px -> alloca $ \py -> alloca $ \pz -> do
+  c_sceneNodeGetPosition sn px py pz
+  x <- peek px
+  y <- peek py
+  z <- peek pz
+  return $ fmap realToFrac (V3 x y z)
+
+
+foreign import ccall unsafe "wv2_scene_node_get_scale"
+  c_sceneNodeGetScale :: Ptr SceneNode' -> Ptr CDouble -> Ptr CDouble -> Ptr CDouble -> IO ()
+
+sceneNodeGetScale :: SceneNode -> IO (V3 Double)
+sceneNodeGetScale (SceneNode sn) =
+  alloca $ \px -> alloca $ \py -> alloca $ \pz -> do
+  c_sceneNodeGetScale sn px py pz
+  x <- peek px
+  y <- peek py
+  z <- peek pz
+  return $ fmap realToFrac (V3 x y z)
+
+
+foreign import ccall unsafe "wv2_scene_node_get_orientation"
+  c_sceneNodeGetOrientation :: Ptr SceneNode' -> Ptr CDouble -> Ptr CDouble -> Ptr CDouble -> Ptr CDouble -> IO ()
+
+sceneNodeGetOrientation :: SceneNode -> IO (Quaternion Double)
+sceneNodeGetOrientation (SceneNode sn) =
+  alloca $ \pw -> alloca $ \px -> alloca $ \py -> alloca $ \pz -> do
+  c_sceneNodeGetOrientation sn pw px py pz
+  w <- peek pw
+  x <- peek px
+  y <- peek py
+  z <- peek pz
+  return $ fmap realToFrac (Quaternion w (V3 x y z))
 
 
 -- Technique
