@@ -78,6 +78,7 @@ extern "C" {
   // RenderWindow
   Ogre::RenderWindow* wv2_render_window_get();
   void wv2_render_window_write_contents_to_timestamped_file(Ogre::RenderWindow*, char *name, char *ext);
+  void wv2_render_window_write_contents_to_file(Ogre::RenderWindow* obj, char *name);
 
   // SceneNode
   Ogre::SceneNode* wv2_scene_node_get_root();
@@ -404,6 +405,9 @@ Ogre::RenderWindow* wv2_render_window_get() {
 }
 void wv2_render_window_write_contents_to_timestamped_file(Ogre::RenderWindow* obj, char *name, char *ext) {
   obj->writeContentsToTimestampedFile(std::string(name), std::string(ext));
+}
+void wv2_render_window_write_contents_to_file(Ogre::RenderWindow* obj, char *name) {
+  obj->writeContentsToFile(std::string(name));
 }
 
 

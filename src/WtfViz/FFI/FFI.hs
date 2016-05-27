@@ -83,6 +83,7 @@ module WtfViz.FFI.FFI
          -- * RenderWindow
        , RenderWindow
        , renderWindowGet
+       , renderWindowWriteContentsToFile
        , renderWindowWriteContentsToTimestampedFile
 
          -- * SceneNode
@@ -618,6 +619,15 @@ foreign import ccall unsafe "wv2_render_window_get"
 
 renderWindowGet :: IO RenderWindow
 renderWindowGet = RenderWindow <$> c_renderWindowGet
+
+foreign import ccall unsafe "wv2_render_window_write_contents_to_file"
+  c_renderWindowWriteContentsToFile :: Ptr RenderWindow' -> CString -> IO ()
+
+renderWindowWriteContentsToFile :: RenderWindow -> String -> IO ()
+renderWindowWriteContentsToFile (RenderWindow obj) name =
+  withCString name $ \cname ->
+  c_renderWindowWriteContentsToFile obj cname
+
 
 foreign import ccall unsafe "wv2_render_window_write_contents_to_timestamped_file"
   c_renderWindowWriteContentsToTimestampedFile :: Ptr RenderWindow' -> CString -> CString -> IO ()
