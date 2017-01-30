@@ -11,6 +11,7 @@ extern "C" {
                    HsFunPtr haskell_mouse_moved);
   void wv2_set_extra_messages(char *msgs);
   void wv2_set_skybox(int some_bool, char *name);
+  void wv2_set_background_colour(double r, double g, double b, double a);
   void wv2_shut_down();
 
   // Camera
@@ -132,6 +133,10 @@ void wv2_set_extra_messages(char *cmsgs) {
 
 void wv2_set_skybox(int some_bool, char *name) {
   OgreFramework::getSingletonPtr()->m_pSceneMgr->setSkyBox(some_bool, std::string(name));
+}
+
+void wv2_set_background_colour(double r, double g, double b, double a) {
+  OgreFramework::getSingletonPtr()->m_pViewport->setBackgroundColour(Ogre::ColourValue(r, g, b, a));
 }
 
 void wv2_shut_down() {

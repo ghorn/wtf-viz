@@ -108,6 +108,7 @@ module WtfViz.FFI.FFI
          -- * misc
        , setExtraMessages
        , setSkybox
+       , setBackgroundColour
        ) where
 
 import GHC.Generics ( Generic )
@@ -771,3 +772,10 @@ foreign import ccall unsafe "wv2_set_skybox"
 
 setSkybox :: Bool -> String -> IO ()
 setSkybox b name = withCString name (c_setSkybox (fromIntegral (fromEnum b)))
+
+foreign import ccall unsafe "wv2_set_background_colour"
+  c_setBackgroundColour :: CDouble -> CDouble -> CDouble -> CDouble -> IO ()
+
+setBackgroundColour :: Double -> Double -> Double -> Double -> IO ()
+setBackgroundColour r g b a =
+  c_setBackgroundColour (realToFrac r) (realToFrac g) (realToFrac b) (realToFrac a)
