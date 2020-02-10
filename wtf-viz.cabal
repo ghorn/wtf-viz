@@ -17,6 +17,7 @@ library
   other-modules:       WtfViz.FFI.FFI
                        WtfViz.FFI.Keyboard
                        WtfViz.FFI.Mouse
+                       WtfViz.Object
 
   other-extensions:    DeriveGeneric
 
